@@ -1,0 +1,848 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Same Hand, Different Apparatus</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* A single committed dark world: a 3D room with a floating target panel, HUD chrome around it, glass overlays between blocks. */
+:root {
+  color-scheme: dark;
+  --bg: #070b10;
+  --glass: rgba(14, 22, 30, 0.72);
+  --glass-edge: rgba(150, 190, 205, 0.22);
+  --fg: #e6edf1;
+  --muted: #8ea3b0;
+  --line: rgba(150, 190, 205, 0.16);
+  --teal: #5fb3c1;
+  --teal-soft: rgba(95, 179, 193, 0.16);
+  --crimson: #e0708a;
+  --crimson-soft: rgba(224, 112, 138, 0.16);
+  --ochre: #e0b45a;
+  --ochre-soft: rgba(224, 180, 90, 0.16);
+  --amber: #f0c75e;
+  --focus: #9ad0ff;
+  --font: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 16px; line-height: 1.5; overflow: hidden; }
+#scene { position: fixed; inset: 0; display: block; }
+#scene.capture { cursor: none; }
+h1, h2, h3 { margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.015em; }
+h2 { font-size: clamp(1.6rem, 3.4vw, 2.4rem); }
+h3 { font-size: 1.1rem; }
+p { margin: 0; }
+.label { font-family: var(--mono); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.lede { font-size: 1.1rem; max-width: 60ch; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+button { font: inherit; cursor: pointer; border-radius: 999px; padding: 12px 24px; border: 1px solid var(--glass-edge); background: rgba(255,255,255,0.05); color: var(--fg); font-weight: 700; letter-spacing: 0.02em; transition: background 0.15s, transform 0.15s; }
+button:hover { background: rgba(255,255,255,0.1); }
+button.primary { background: var(--teal); color: #061015; border-color: var(--teal); box-shadow: 0 0 28px rgba(95,179,193,0.35); }
+button.primary:hover { background: #78c4d0; }
+button.icon { padding: 8px 12px; font-size: 0.85rem; font-family: var(--mono); }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+.tag { display: inline-block; font-family: var(--mono); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; border: 1px solid; }
+.tone-teal { color: var(--teal); background: var(--teal-soft); border-color: rgba(95,179,193,0.4); }
+.tone-crimson { color: var(--crimson); background: var(--crimson-soft); border-color: rgba(224,112,138,0.4); }
+.tone-ochre { color: var(--ochre); background: var(--ochre-soft); border-color: rgba(224,180,90,0.4); }
+
+/* ---- overlays (intro, interstitial, feedback, results, pause) ---- */
+.veil { position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px;
+  background: radial-gradient(ellipse at 50% 60%, rgba(7,11,16,0.35), rgba(7,11,16,0.82)); }
+.glass { width: 100%; max-width: 680px; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 20px; padding: clamp(22px, 4vw, 40px);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 18px; }
+.glass.wide { max-width: 980px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.cond-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cond-list li { display: grid; grid-template-columns: 2rem 1fr; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.cond-list li:last-child { border-bottom: 0; }
+.cond-list .n { font-family: var(--mono); color: var(--teal); font-weight: 600; }
+.note { border-left: 2px solid var(--teal); padding: 4px 0 4px 14px; }
+.opts { display: grid; gap: 8px; font-size: 0.95rem; }
+.opts label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.opts input { margin-top: 5px; width: 16px; height: 16px; accent-color: var(--teal); }
+.warn { color: var(--crimson); font-size: 0.95rem; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.two > * { min-width: 0; }
+.big-num { font-family: var(--mono); font-size: clamp(3rem, 8vw, 4.5rem); font-weight: 600; line-height: 1; color: var(--teal); text-shadow: 0 0 30px rgba(95,179,193,0.45); }
+.kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kv > div { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.kv .v { font-family: var(--mono); font-size: 1.4rem; font-weight: 600; }
+.ring { width: 120px; height: 120px; margin: 0 auto; }
+.formula { font-family: var(--mono); font-size: 0.85rem; border: 1px solid var(--line); padding: 10px 12px; border-radius: 10px; overflow-x: auto; color: var(--muted); }
+.fade { animation: fade 0.5s ease-out both; }
+@keyframes fade { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fade { animation: none; } }
+
+/* ---- HUD ---- */
+#hud { position: fixed; inset: 0; z-index: 5; pointer-events: none;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; }
+.hud-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.chip { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 10px 16px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); backdrop-filter: blur(10px); font-variant-numeric: tabular-nums; }
+.chip strong { color: var(--fg); }
+.hud-controls { display: flex; gap: 8px; pointer-events: auto; }
+.hud-controls button { background: var(--glass); backdrop-filter: blur(10px); }
+#telemetry { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); width: 220px; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 16px; padding: 16px; backdrop-filter: blur(12px); display: flex; flex-direction: column; gap: 10px; }
+#telemetry dl { margin: 0; display: grid; gap: 7px; }
+#telemetry .r { display: flex; justify-content: space-between; gap: 8px; font-size: 0.88rem; }
+#telemetry dt { color: var(--muted); }
+#telemetry dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+#telemetry hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+#telemetry .exit { font-size: 0.8rem; color: var(--muted); font-style: italic; }
+.meter { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--teal); transition: width 0.2s; }
+#trace-wrap { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 14px; padding: 10px 14px 8px; backdrop-filter: blur(12px); }
+#trace { display: block; width: 100%; height: 48px; }
+.trace-legend { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.trace-legend .dec { color: var(--teal); }
+#hint { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-size: 0.9rem; color: var(--muted); text-align: center; white-space: nowrap; }
+#vignette { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(224,112,138,0.35) 100%); transition: opacity 0.12s; }
+#flash { position: fixed; inset: 0; z-index: 4; pointer-events: none; opacity: 0; background: radial-gradient(circle at center, rgba(95,179,193,0.18), transparent 60%); }
+
+/* ---- results ---- */
+.chart-scroll { overflow-x: auto; }
+.chart-scroll svg { display: block; width: 100%; min-width: 560px; height: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.table-scroll { overflow-x: auto; }
+textarea { width: 100%; min-height: 130px; font-family: var(--mono); font-size: 0.8rem; background: rgba(0,0,0,0.3); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+details summary { cursor: pointer; color: var(--muted); }
+
+/* ---- facilitator ---- */
+#debug { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 10px; padding: 10px 12px; font-family: var(--mono); font-size: 0.72rem; line-height: 1.5; max-width: 300px; white-space: pre-wrap; backdrop-filter: blur(10px); }
+#debug button { padding: 4px 10px; font-size: 0.72rem; margin-top: 6px; border-radius: 6px; }
+
+@media (max-width: 820px) {
+  #telemetry { display: none; }
+  .two, .kv { grid-template-columns: 1fr; }
+  .kv { grid-template-columns: 1fr 1fr; }
+}
+</style>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+<div id="vignette"></div>
+<div id="flash"></div>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="hud-top">
+    <div class="chip" id="chip-label">Condition 1 of 5 · Mouth stylus</div>
+    <div class="row" style="gap:8px; align-items:flex-start">
+      <div class="chip" id="chip-live"><strong>0.00</strong> bps · 1:00</div>
+      <div class="hud-controls">
+        <button class="icon" id="btn-sound" aria-label="Toggle sound" title="Sound">♪ on</button>
+        <button class="icon" id="btn-full" aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
+      </div>
+    </div>
+  </div>
+  <aside id="telemetry">
+    <p class="label" id="tele-title">This block</p>
+    <div class="meter" aria-hidden="true"><i id="tele-meter"></i></div>
+    <dl id="tele-rows"></dl>
+    <hr>
+    <p class="exit">Esc stops at any time. Nothing is recorded anywhere but this browser.</p>
+  </aside>
+  <p id="hint"></p>
+  <div id="trace-wrap">
+    <div class="trace-legend"><span>Hand</span><span>Signal</span><span class="dec" id="trace-dec">Decoded</span></div>
+    <canvas id="trace" width="560" height="64" aria-hidden="true"></canvas>
+  </div>
+</div>
+
+<!-- INTRO -->
+<section class="veil" id="screen-intro">
+  <div class="glass wide fade">
+    <p class="label">Companion to an essay on Noland Arbaugh and Neuralink</p>
+    <h1>Same hand, different apparatus</h1>
+    <p class="lede">You are about to step into five arrangements of equipment. Your hand is the same hand in each. What changes is the apparatus between your hand and the target: a rotation, a gain, a noise floor, a dropout rate, a drift.</p>
+    <div class="two">
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <h3>The room</h3>
+        <p class="muted">A panel of thirty-six squares floats in front of you. One lights amber. Steer the glowing point onto it and click. About a minute per arrangement, scored in bits per second, the measure Neuralink publishes for Arbaugh.</p>
+        <ol class="cond-list" aria-label="The five arrangements">
+          <li><span class="n">01</span><span><strong>Mouth stylus</strong><br><span class="muted">Seven and a half years of reaching with the jaw.</span></span></li>
+          <li><span class="n">02</span><span><strong>Implant, before calibration</strong><br><span class="muted">A signal, and no decoder that understands it.</span></span></li>
+          <li><span class="n">03</span><span><strong>Calibrated</strong><br><span class="muted">Follow the White Rabbit while the system learns you.</span></span></li>
+          <li><span class="n">04</span><span><strong>Threads retract</strong><br><span class="muted">The signal thins and drifts, as it did a month after surgery.</span></span></li>
+          <li><span class="n">05</span><span><strong>Retuned to populations</strong><br><span class="muted">The decoder rebuilt around groups of neurons.</span></span></li>
+        </ol>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <h3>Before you enter</h3>
+        <p class="note">This does not simulate what Arbaugh feels, what spinal cord injury is like, or what it is like to have threads in the brain. It changes only the equipment around an ordinary hand.</p>
+        <p class="muted">You need a mouse or trackpad on a laptop or desktop. From the second arrangement onwards your pointer is captured, so the glowing point is all you see. <strong style="color:var(--fg)">Esc stops at any time.</strong> Nothing is recorded anywhere but this browser.</p>
+        <p id="touch-warn" class="warn" hidden>This device looks touch-only. The room needs a mouse or trackpad.</p>
+        <p class="formula">bps = log₂(36 − 1) × max(hits − misses, 0) ÷ seconds</p>
+        <div class="opts">
+          <p class="label">Facilitator</p>
+          <label for="opt-short"><input type="checkbox" id="opt-short"> <span>Short demo: 20-second blocks, 10-second calibration</span></label>
+          <label for="opt-debug"><input type="checkbox" id="opt-debug"> <span>Facilitator overlay (hidden values, N skips, R restarts)</span></label>
+        </div>
+        <div class="row"><button class="primary" id="btn-start">Enter the room</button><button id="btn-start-full">Enter fullscreen</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTERSTITIAL -->
+<section class="veil" id="screen-inter" hidden>
+  <div class="glass fade" id="inter-card">
+    <p class="label" id="inter-eyebrow">Arrangement 1 of 5</p>
+    <h2 id="inter-title">Mouth stylus</h2>
+    <div><span class="tag" id="inter-tag">Absolute control</span></div>
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <p class="label" id="inter-what-label">What changes</p>
+      <p id="inter-what" class="lede"></p>
+    </div>
+    <p class="muted" id="inter-how"></p>
+    <div class="row" id="inter-actions"></div>
+  </div>
+</section>
+
+<!-- FEEDBACK -->
+<section class="veil" id="screen-feedback" hidden>
+  <div class="glass fade">
+    <p class="label" id="fb-eyebrow">Arrangement 1 of 5 · complete</p>
+    <h2 id="fb-title">Mouth stylus</h2>
+    <div class="row" style="align-items:baseline; gap:12px"><span class="big-num" id="fb-bps">0.00</span><span class="muted">bits per second</span></div>
+    <div class="kv">
+      <div><p class="label">Hits</p><p class="v" id="fb-hits">0</p></div>
+      <div><p class="label">Misses</p><p class="v" id="fb-misses">0</p></div>
+      <div><p class="label">Seconds</p><p class="v" id="fb-secs">60</p></div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:6px">
+      <p class="label">What it often feels like</p>
+      <p id="fb-feels" class="lede"></p>
+    </div>
+    <div class="row"><button class="primary" id="btn-continue">Continue</button></div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section class="veil" id="screen-results" hidden>
+  <div class="glass wide fade" style="gap:24px">
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <p class="label">Session complete</p>
+      <h1>Your hand was the same in all five</h1>
+      <p class="lede">Everything that changed was a property of the apparatus. These numbers are yours, scored the way Neuralink scores Arbaugh.</p>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <p class="label">Bits per second across the session</p>
+      <p class="muted" style="font-size:0.9rem">The band and the dashed line are company-reported reference figures, not independently published.</p>
+      <div class="chart-scroll"><svg id="chart" viewBox="0 0 720 330" role="img" aria-label="Line chart of your bits per second in each condition"></svg></div>
+    </div>
+    <div class="two">
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <p class="label">Block by block</p>
+        <div class="table-scroll"><table id="res-table"></table></div>
+        <p class="muted" id="res-hidden" style="font-size:0.9rem"></p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <p class="label">One number, many worlds</p>
+        <p>Bits per second works as a boundary object (Star and Griesemer 1989). It stays recognisable across communities while meaning something different in each.</p>
+        <p class="muted">To an engineer it is a benchmark. To a company it is a headline. To a sceptic it asks what "high performance" means when the thing measured is a cursor. To Arbaugh it became a game he could play and win.</p>
+        <p><strong>What did your number leave out?</strong> <span class="muted">Fatigue, relief, the moment the habit broke. None of it fits in the score.</span></p>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:12px">
+      <p class="label">Keep your results</p>
+      <div class="row">
+        <button class="primary" id="btn-copy">Copy results as CSV</button>
+        <button id="btn-again">Run again</button>
+        <span id="copy-status" class="muted" role="status"></span>
+      </div>
+      <details id="csv-details"><summary>Show CSV</summary><textarea id="csv-text" readonly aria-label="Results as CSV"></textarea></details>
+    </div>
+  </div>
+</section>
+
+<!-- PAUSE -->
+<section class="veil" id="pause" hidden style="z-index:20">
+  <div class="glass fade" role="dialog" aria-modal="true" aria-labelledby="pause-title" style="max-width:460px">
+    <p class="label">Paused</p>
+    <h2 id="pause-title">You stepped out</h2>
+    <p class="muted">The clock is stopped. Carry on where you left off, or end the session and see the arrangements you finished.</p>
+    <div class="row"><button class="primary" id="btn-resume">Resume</button><button id="btn-end">End session</button></div>
+  </div>
+</section>
+
+<div id="debug" hidden><span id="debug-text"></span><div><button id="btn-selftest">Self-test calibration</button></div><span id="selftest-out"></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ==========================================================================
+   CONFIG — every tunable number. Adjust after pilot testing.
+   The task runs in a logical 600×600 space; the 3D panel maps onto it.
+   ========================================================================== */
+const CONFIG = {
+  blockSeconds: 60, calibSeconds: 25, shortBlockSeconds: 20, shortCalibSeconds: 10,
+  gridN: 6, baseGain: 1.0,
+  stylus:  { followRate: 5.0, maxSpeedFrac: 0.42, wobblePx: 3.0, wobbleHz: 6.5 },
+  uncal:   { minDeg: 35, maxDeg: 70, noiseFrac: 0.30, jitterPx: 0.5 },
+  calib:   { lagsMs: [0,50,100,150,200,250,300,350,400], amp: 0.36, w1: 2*Math.PI*0.11, w2: 2*Math.PI*0.17, velTau: 0.06, minGain: 0.7, maxGain: 1.6, jitterPx: 0.15, lowQuality: 0.6 },
+  retract: { maxDriftDeg: 25, gainEnd: 0.45, noiseFracStart: 0.05, noiseFracEnd: 0.65, jitterStart: 0.2, jitterEnd: 2.4, dropoutRateStart: 0.15, dropoutRateEnd: 1.4, dropoutMinMs: 200, dropoutMaxMs: 800, signalEnd: 0.15 },
+  retuned: { minOffsetDeg: 15, maxOffsetDeg: 20, gainMult: 1.3, smoothing: 0.18, jitterPx: 0.1 }
+};
+
+const CONDS = [
+  { name: 'Mouth stylus', tag: 'Absolute control', tone: 'teal', relative: false, decoder: 'Stylus',
+    what: 'The point follows where your hand is. Slow, damped, and rate-limited.',
+    feels: 'Workable but tiring. Every target is a deliberate reach and a pause.',
+    how: 'Your pointer stays free. Move it over the panel and the point follows.' },
+  { name: 'Implant, before calibration', tag: 'Rotated · noisy', tone: 'crimson', relative: true, decoder: 'Untrained',
+    what: 'The point follows how you move, not where you are. The direction is rotated by an angle you are not told.',
+    feels: 'You move right and the point goes diagonally. Close to impossible.',
+    how: 'When you enter, the room captures your pointer. Esc steps out.' },
+  { name: 'Calibrated', tag: 'Fitted', tone: 'teal', relative: true, calib: true, decoder: 'Fitted',
+    what: 'You follow a moving light for a short while. The system works out the rotation and corrects for it.',
+    feels: 'What was impossible a minute ago is now easy. Nothing about your hand changed.',
+    how: 'First, calibration. A light glides around the panel. Move your hand as if steering it. Your own point is hidden while the system learns.' },
+  { name: 'Threads retract', tag: 'Degrading', tone: 'ochre', relative: true, decoder: 'Fitted, degrading',
+    what: 'Noise rises, gain falls, the signal cuts out, and the mapping slowly drifts away from the one you learned.',
+    feels: 'The point stalls and wanders. Practising does not help, because it is still degrading.',
+    how: 'Same panel, same hand. The apparatus changes around you while you play.' },
+  { name: 'Retuned to populations', tag: 'Recovered, not restored', tone: 'teal', relative: true, decoder: 'Population',
+    what: 'Control is restored, but through a different mapping than the one you learned.',
+    feels: 'Relief, then a second, smaller disorientation. The habit you built is now slightly wrong.',
+    how: 'The decoder now listens to groups of neurons rather than single ones.' }
+];
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function gauss() { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function rot(x, y, deg) { const r = deg * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return [x * c - y * s, x * s + y * c]; }
+function normDeg(d) { return ((d + 180) % 360 + 360) % 360 - 180; }
+function fmtTime(sec) { sec = Math.max(0, Math.ceil(sec)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+const BITS = Math.log2(CONFIG.gridN * CONFIG.gridN - 1);
+function bitrate(h, m, s) { return s < 1 ? 0 : BITS * Math.max(h - m, 0) / s; }
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SIZE = 600;
+
+/* ---------- state ---------- */
+const S = {
+  phase: 'intro', ci: 0, paused: false, short: false, debug: false, sound: true,
+  theta: 0, phi: 0, gain: 1, fitQ: null, lagMs: 0, offset5: 0, driftDir: 1, calibrated: false,
+  elapsed: 0, dur: 60, clock: 0, hits: 0, misses: 0, target: -1,
+  dot: { x: 300, y: 300 }, base: { x: 300, y: 300 }, perp: [0, 1], abs: { x: 300, y: 300, has: false },
+  pend: { dx: 0, dy: 0 }, vel: { x: 0, y: 0 }, svel: { x: 0, y: 0 },
+  samples: [], liveFit: null, nextFitAt: 0,
+  dropoutUntil: 0, inDropout: false, live4: { drift: 0, signal: 1, q: null },
+  results: [null, null, null, null, null], locked: false, lockUnavailable: false,
+  handSpeed: 0, decSpeed: 0, trace: { hand: new Array(140).fill(0), dec: new Array(140).fill(0) },
+  shake: 0, flashT: 0
+};
+
+/* ---------- THREE scene ---------- */
+const PANEL_W = 6;                       // world units across the panel
+const toWorld = (gx, gy) => [ (gx / SIZE - 0.5) * PANEL_W, (0.5 - gy / SIZE) * PANEL_W ];
+const COL = { teal: 0x5fb3c1, crimson: 0xe0708a, ochre: 0xe0b45a, amber: 0xf0c75e, cell: 0x101a22, cellEdge: 0x27404b, grid: 0x1e4a56, bg: 0x070b10 };
+
+const sceneCanvas = $('#scene');
+const renderer = new THREE.WebGLRenderer({ canvas: sceneCanvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(COL.bg);
+scene.fog = new THREE.FogExp2(COL.bg, 0.055);
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
+camera.position.set(0, 0.6, 9.8);
+const CAM_Z = 9.8, PANEL_Y = 0.55, LOOK_Y = 0.45;
+
+// floor and ceiling grids receding to the horizon
+const floor = new THREE.GridHelper(120, 90, COL.grid, COL.grid); floor.position.y = -3.4; scene.add(floor);
+const ceil = new THREE.GridHelper(120, 90, COL.grid, COL.grid); ceil.position.y = 5.0; ceil.material.opacity = 0.5; ceil.material.transparent = true; scene.add(ceil);
+
+// drifting motes
+const moteCount = reduceMotion ? 0 : 420;
+const motePos = new Float32Array(moteCount * 3);
+for (let i = 0; i < moteCount; i++) { motePos[i*3] = rand(-18, 18); motePos[i*3+1] = rand(-4, 5); motePos[i*3+2] = rand(-24, 6); }
+const moteGeo = new THREE.BufferGeometry(); moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ color: 0x7fb6c2, size: 0.045, transparent: true, opacity: 0.55, depthWrite: false }));
+scene.add(motes);
+
+function glowTexture(inner, outer) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, inner); gr.addColorStop(0.35, outer); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); return t;
+}
+const haloTex = glowTexture('rgba(255,255,255,0.9)', 'rgba(255,255,255,0.25)');
+
+// the panel
+const panel = new THREE.Group(); panel.rotation.x = -0.1; panel.position.y = PANEL_Y; scene.add(panel);
+const cells = [];
+function cellRect(i) {
+  const N = CONFIG.gridN, gap = SIZE * 0.018, cell = (SIZE - gap * (N + 1)) / N;
+  const col = i % N, row = Math.floor(i / N);
+  return { x: gap + col * (cell + gap), y: gap + row * (cell + gap), w: cell, h: cell };
+}
+const cellW = cellRect(0).w / SIZE * PANEL_W;
+const cellGeo = new THREE.PlaneGeometry(cellW, cellW);
+const edgeGeo = new THREE.EdgesGeometry(cellGeo);
+for (let i = 0; i < CONFIG.gridN ** 2; i++) {
+  const r = cellRect(i); const [wx, wy] = toWorld(r.x + r.w / 2, r.y + r.h / 2);
+  const mat = new THREE.MeshBasicMaterial({ color: COL.cell, transparent: true, opacity: 0.85 });
+  const m = new THREE.Mesh(cellGeo, mat); m.position.set(wx, wy, 0);
+  const e = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: COL.cellEdge, transparent: true, opacity: 0.9 })); e.position.set(wx, wy, 0.002);
+  panel.add(m, e); cells.push({ mesh: m, edge: e, baseX: wx, baseY: wy });
+}
+// target halo
+const targetHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: COL.amber, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+targetHalo.scale.set(cellW * 2.6, cellW * 2.6, 1); targetHalo.visible = false; panel.add(targetHalo);
+// invisible plane for absolute-mode raycasting
+const hitPlane = new THREE.Mesh(new THREE.PlaneGeometry(PANEL_W * 1.4, PANEL_W * 1.4), new THREE.MeshBasicMaterial({ visible: false })); panel.add(hitPlane);
+// the point: ring + core + halo
+const dotGroup = new THREE.Group(); panel.add(dotGroup); dotGroup.position.z = 0.12;
+const ringMat = new THREE.MeshBasicMaterial({ color: COL.teal, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.13, 40), ringMat); dotGroup.add(ring);
+const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+const core = new THREE.Mesh(new THREE.CircleGeometry(0.03, 20), coreMat); dotGroup.add(core);
+const dotHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: COL.teal, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+dotHalo.scale.set(0.9, 0.9, 1); dotGroup.add(dotHalo);
+// rabbit (calibration light)
+const rabbit = new THREE.Group(); panel.add(rabbit); rabbit.position.z = 0.12; rabbit.visible = false;
+rabbit.add(new THREE.Mesh(new THREE.CircleGeometry(0.11, 24), new THREE.MeshBasicMaterial({ color: COL.amber })));
+const rabbitHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: COL.amber, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending })); rabbitHalo.scale.set(1.4, 1.4, 1); rabbit.add(rabbitHalo);
+// trail
+const TRAIL_N = 70; const trailPos = new Float32Array(TRAIL_N * 3);
+const trailGeo = new THREE.BufferGeometry(); trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+const trailMat = new THREE.LineBasicMaterial({ color: COL.teal, transparent: true, opacity: 0.45 });
+const trail = new THREE.Line(trailGeo, trailMat); trail.position.z = 0.1; panel.add(trail);
+const trailPts = [];
+// click bursts
+const bursts = [];
+function burst(x, y, hit) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, color: hit ? COL.teal : COL.crimson, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const [wx, wy] = toWorld(x, y); s.position.set(wx, wy, 0.15); s.scale.set(0.4, 0.4, 1); panel.add(s); bursts.push({ s, t: 0, hit });
+}
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  // keep the panel in view on narrow screens
+  camera.position.z = CAM_Z * Math.max(1, (h / w) * 0.95, 760 / h);
+}
+window.addEventListener('resize', resize); resize();
+
+/* ---------- audio ---------- */
+let AC = null, hum = null, humGain = null;
+function audioInit() {
+  if (AC) return;
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    hum = AC.createOscillator(); hum.type = 'sine'; hum.frequency.value = 55;
+    humGain = AC.createGain(); humGain.gain.value = 0;
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 220;
+    hum.connect(f).connect(humGain).connect(AC.destination); hum.start();
+  } catch (e) { AC = null; }
+}
+function tone(f0, f1, dur, type, vol) {
+  if (!AC || !S.sound) return;
+  const o = AC.createOscillator(), g = AC.createGain(); o.type = type || 'sine';
+  o.frequency.setValueAtTime(f0, AC.currentTime); o.frequency.exponentialRampToValueAtTime(f1, AC.currentTime + dur);
+  g.gain.setValueAtTime(vol || 0.08, AC.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + dur);
+  o.connect(g).connect(AC.destination); o.start(); o.stop(AC.currentTime + dur + 0.02);
+}
+function crackle() {
+  if (!AC || !S.sound) return;
+  const n = AC.sampleRate * 0.12, buf = AC.createBuffer(1, n, AC.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n) * 0.25;
+  const src = AC.createBufferSource(); src.buffer = buf; const g = AC.createGain(); g.gain.value = 0.25; src.connect(g).connect(AC.destination); src.start();
+}
+const sfx = { hit: () => tone(660, 1320, 0.14, 'sine', 0.07), miss: () => tone(160, 90, 0.2, 'triangle', 0.08), enter: () => tone(220, 440, 0.5, 'sine', 0.05), calibDone: () => { tone(440, 880, 0.3, 'sine', 0.05); setTimeout(() => tone(660, 1320, 0.3, 'sine', 0.05), 120); } };
+function setHum(level) { if (humGain && AC) humGain.gain.setTargetAtTime(S.sound ? level : 0, AC.currentTime, 0.1); }
+
+/* ---------- screens ---------- */
+const screens = ['intro', 'inter', 'feedback', 'results'];
+function show(name) {
+  screens.forEach(s => { $('#screen-' + s).hidden = s !== name; });
+  $('#hud').hidden = name !== null;
+  sceneCanvas.classList.toggle('capture', name === null);
+}
+(function initOptions() {
+  const h = (location.hash || '').toLowerCase();
+  $('#opt-short').checked = h.includes('short'); $('#opt-debug').checked = h.includes('debug');
+  const coarseOnly = window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(any-pointer: fine)').matches;
+  $('#touch-warn').hidden = !coarseOnly;
+})();
+
+function blockSecs() { return S.short ? CONFIG.shortBlockSeconds : CONFIG.blockSeconds; }
+function calibSecs() { return S.short ? CONFIG.shortCalibSeconds : CONFIG.calibSeconds; }
+function setTag(el, text, tone) { el.textContent = text; el.className = 'tag tone-' + tone; }
+function toneHex(t) { return t === 'crimson' ? COL.crimson : t === 'ochre' ? COL.ochre : COL.teal; }
+
+function startSession(full) {
+  audioInit();
+  if (full) goFullscreen();
+  S.short = $('#opt-short').checked; S.debug = $('#opt-debug').checked; $('#debug').hidden = !S.debug;
+  const sign = Math.random() < 0.5 ? -1 : 1;
+  S.theta = sign * rand(CONFIG.uncal.minDeg, CONFIG.uncal.maxDeg);
+  S.driftDir = Math.random() < 0.5 ? -1 : 1;
+  S.offset5 = (Math.random() < 0.5 ? -1 : 1) * rand(CONFIG.retuned.minOffsetDeg, CONFIG.retuned.maxOffsetDeg);
+  S.phi = 0; S.gain = 1; S.fitQ = null; S.lagMs = 0; S.calibrated = false;
+  S.results = [null, null, null, null, null]; S.ci = 0;
+  sfx.enter(); showInter();
+}
+
+function showInter() {
+  S.phase = 'inter'; const c = CONDS[S.ci];
+  $('#inter-eyebrow').textContent = `Arrangement ${S.ci + 1} of 5`;
+  $('#inter-title').textContent = c.name; setTag($('#inter-tag'), c.tag, c.tone);
+  $('#inter-what-label').textContent = 'What changes';
+  $('#inter-what').textContent = c.what.replace('a short while', `${calibSecs()} seconds`);
+  $('#inter-how').textContent = c.how;
+  const acts = $('#inter-actions'); acts.innerHTML = '';
+  const b = document.createElement('button'); b.className = 'primary'; b.id = 'btn-begin'; b.textContent = c.calib ? 'Begin calibration' : 'Enter';
+  b.addEventListener('click', () => c.calib ? startCalib() : startBlock()); acts.appendChild(b);
+  setPanelTone(c.tone); show('inter'); b.focus();
+}
+
+function showCalibDone() {
+  S.phase = 'inter'; const q = S.fitQ == null ? 0 : S.fitQ, ok = q >= CONFIG.calib.lowQuality;
+  $('#inter-eyebrow').textContent = 'Arrangement 3 of 5 · calibration complete';
+  $('#inter-title').textContent = 'Calibrated';
+  setTag($('#inter-tag'), `Fitted · ${Math.round(q * 100)}%`, ok ? 'teal' : 'ochre');
+  $('#inter-what-label').textContent = 'What the system learned';
+  $('#inter-what').textContent = `Fit quality ${Math.round(q * 100)}%. Recovered rotation ${Math.round(normDeg(-S.phi))}°. Gain ×${S.gain.toFixed(2)}. The decoder will now undo that rotation.`;
+  $('#inter-how').textContent = ok ? 'Same panel as before. Your hand has not changed.' : 'The fit is weak, which usually means the hand did not move much. Recalibrate, or carry on and feel what a poor fit is like.';
+  const acts = $('#inter-actions'); acts.innerHTML = '';
+  const b = document.createElement('button'); b.id = 'btn-begin'; b.textContent = 'Enter'; b.addEventListener('click', startBlock);
+  const r = document.createElement('button'); r.id = 'btn-recal'; r.textContent = 'Recalibrate'; r.addEventListener('click', startCalib);
+  if (ok) { b.className = 'primary'; acts.append(b, r); } else { r.className = 'primary'; acts.append(r, b); }
+  show('inter'); acts.firstChild.focus();
+}
+
+function resetMotion() { S.pend.dx = S.pend.dy = 0; S.vel.x = S.vel.y = 0; S.svel.x = S.svel.y = 0; trailPts.length = 0; S.inDropout = false; S.dropoutUntil = 0; S.trace.hand.fill(0); S.trace.dec.fill(0); }
+
+function startCalib() {
+  S.phase = 'calib'; S.paused = false; S.elapsed = 0; S.clock = 0; S.dur = calibSecs();
+  S.samples = []; S.liveFit = null; S.nextFitAt = 0.5; resetMotion();
+  show(null); requestLock(); updatePanel(true); setHum(0.02);
+}
+function endCalib() {
+  const fit = fitCalibration(S.samples);
+  if (fit) { S.phi = fit.phi; S.fitQ = fit.q; S.lagMs = fit.lag; S.gain = clamp(fit.gain, CONFIG.calib.minGain, CONFIG.calib.maxGain); }
+  else { S.phi = 0; S.fitQ = 0; S.gain = 1; }
+  S.calibrated = true; S.phase = 'inter'; releaseLock(); setHum(0); sfx.calibDone(); showCalibDone();
+}
+function startBlock() {
+  S.phase = 'block'; S.paused = false; S.elapsed = 0; S.clock = 0; S.dur = blockSecs(); S.hits = 0; S.misses = 0; resetMotion();
+  S.dot.x = S.base.x = SIZE / 2; S.dot.y = S.base.y = SIZE / 2; S.target = -1; pickTarget();
+  show(null); if (CONDS[S.ci].relative) requestLock(); updatePanel(true); setHum(S.ci === 3 ? 0.03 : 0.015);
+}
+function endBlock() {
+  const c = CONDS[S.ci], secs = Math.min(S.elapsed, S.dur), bps = bitrate(S.hits, S.misses, secs);
+  S.results[S.ci] = { hits: S.hits, misses: S.misses, secs, bps };
+  S.phase = 'feedback'; releaseLock(); setHum(0); $('#vignette').style.opacity = 0;
+  $('#fb-eyebrow').textContent = `Arrangement ${S.ci + 1} of 5 · complete`;
+  $('#fb-title').textContent = c.name; $('#fb-bps').textContent = bps.toFixed(2);
+  $('#fb-bps').style.color = `#${toneHex(c.tone).toString(16).padStart(6, '0')}`;
+  $('#fb-hits').textContent = S.hits; $('#fb-misses').textContent = S.misses; $('#fb-secs').textContent = Math.round(secs);
+  $('#fb-feels').textContent = c.feels;
+  $('#btn-continue').textContent = S.ci < 4 ? 'Next arrangement' : 'See your results';
+  show('feedback'); $('#btn-continue').focus();
+}
+function nextCondition() { S.ci++; if (S.ci < 5) showInter(); else showResults(); }
+
+/* ---------- pointer lock & fullscreen ---------- */
+function requestLock() {
+  if (S.lockUnavailable || !sceneCanvas.requestPointerLock) { S.lockUnavailable = true; updateHint(); return; }
+  try { const p = sceneCanvas.requestPointerLock(); if (p && p.catch) p.catch(() => { S.lockUnavailable = true; updateHint(); }); } catch (e) { S.lockUnavailable = true; }
+}
+function releaseLock() { if (document.pointerLockElement) { try { document.exitPointerLock(); } catch (e) {} } }
+document.addEventListener('pointerlockchange', () => {
+  const now = document.pointerLockElement === sceneCanvas;
+  if (!now && S.locked && running()) pause();
+  S.locked = now; updateHint();
+});
+document.addEventListener('pointerlockerror', () => { S.lockUnavailable = true; updateHint(); });
+function goFullscreen() { const el = document.documentElement; try { const p = (el.requestFullscreen || el.webkitRequestFullscreen).call(el); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function toggleFullscreen() { if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} } else goFullscreen(); }
+
+function running() { return (S.phase === 'calib' || S.phase === 'block') && !S.paused; }
+function relativeNow() { return S.phase === 'calib' || (S.phase === 'block' && CONDS[S.ci].relative); }
+function updateHint() {
+  const n = $('#hint');
+  if (S.phase === 'calib') n.textContent = 'Follow the light with your hand.';
+  else if (!relativeNow()) n.textContent = 'Move the point onto the amber square and click.';
+  else if (S.locked) n.textContent = 'Pointer captured. Esc steps out.';
+  else if (S.lockUnavailable) n.textContent = 'Keep your pointer over the room. Clicks still count.';
+  else n.textContent = 'Click to capture the pointer.';
+}
+
+/* ---------- pause ---------- */
+function pause() { if (!running()) return; S.paused = true; $('#pause').hidden = false; setHum(0); $('#btn-resume').focus(); }
+function resume() { $('#pause').hidden = true; S.paused = false; S.pend.dx = S.pend.dy = 0; if (relativeNow()) requestLock(); setHum(S.phase === 'calib' ? 0.02 : S.ci === 3 ? 0.03 : 0.015); }
+function endSession() { $('#pause').hidden = true; S.paused = false; releaseLock(); setHum(0); showResults(); }
+
+/* ---------- input ---------- */
+const raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+document.addEventListener('mousemove', e => {
+  if (!running()) return;
+  S.pend.dx += e.movementX || 0; S.pend.dy += e.movementY || 0;
+  if (!relativeNow()) {
+    ndc.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObject(hitPlane)[0];
+    if (hit) { const p = panel.worldToLocal(hit.point.clone()); S.abs.x = clamp((p.x / PANEL_W + 0.5) * SIZE, 0, SIZE); S.abs.y = clamp((0.5 - p.y / PANEL_W) * SIZE, 0, SIZE); S.abs.has = true; }
+  }
+});
+document.addEventListener('mousedown', e => {
+  if (e.button !== 0 || S.phase !== 'block' || S.paused) return;
+  if (e.target.closest('button, #telemetry, #trace-wrap, #debug')) return;
+  const c = CONDS[S.ci];
+  if (c.relative && !S.locked && !S.lockUnavailable) { requestLock(); return; }
+  e.preventDefault(); registerClick();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && running()) { pause(); return; }
+  if (!S.debug) return;
+  if (e.key === 'n' || e.key === 'N') { if (S.phase === 'block') endBlock(); else if (S.phase === 'calib') endCalib(); }
+  if (e.key === 'r' || e.key === 'R') { if (S.phase !== 'intro') { releaseLock(); $('#pause').hidden = true; S.paused = false; startSession(false); } }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+$('#btn-sound').addEventListener('click', () => { S.sound = !S.sound; $('#btn-sound').textContent = S.sound ? '♪ on' : '♪ off'; if (!S.sound) setHum(0); });
+$('#btn-full').addEventListener('click', toggleFullscreen);
+
+/* ---------- task ---------- */
+function cellAt(x, y) { for (let i = 0; i < CONFIG.gridN ** 2; i++) { const r = cellRect(i); if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return i; } return -1; }
+function pickTarget() { const n = CONFIG.gridN ** 2; let t; do { t = Math.floor(Math.random() * n); } while (t === S.target); S.target = t; }
+function registerClick() {
+  const i = cellAt(S.dot.x, S.dot.y);
+  if (i === S.target) { S.hits++; burst(S.dot.x, S.dot.y, true); sfx.hit(); S.flashT = 0.25; pickTarget(); }
+  else { S.misses++; burst(S.dot.x, S.dot.y, false); sfx.miss(); S.shake = 0.18; }
+  updatePanel(true);
+}
+
+/* ---------- calibration ("White Rabbit") ---------- */
+function rabbitPos(t) { const c = CONFIG.calib; return [SIZE * (0.5 + c.amp * Math.sin(c.w1 * t)), SIZE * (0.5 + c.amp * Math.sin(c.w2 * t + 0.6))]; }
+function rabbitVel(t) { const c = CONFIG.calib; return [SIZE * c.amp * c.w1 * Math.cos(c.w1 * t), SIZE * c.amp * c.w2 * Math.cos(c.w2 * t + 0.6)]; }
+/* Least-squares 2D rotation (orthogonal Procrustes) between the apparatus signal and the rabbit's velocity,
+   searched over a few hand lags. Quality is the cosine similarity after the best rotation. */
+function fitCalibration(samples) {
+  let best = null;
+  for (const L of CONFIG.calib.lagsMs) {
+    const l = L / 1000; let C = 0, X = 0, ss = 0, vv = 0;
+    for (const p of samples) { const [vx, vy] = rabbitVel(p.t - l); C += p.sx * vx + p.sy * vy; X += p.sx * vy - p.sy * vx; ss += p.sx ** 2 + p.sy ** 2; vv += vx ** 2 + vy ** 2; }
+    if (ss < 1e-6 || vv < 1e-6) continue;
+    const m = Math.hypot(C, X), q = m / Math.sqrt(ss * vv);
+    if (!best || q > best.q) best = { q, phi: Math.atan2(X, C) * 180 / Math.PI, gain: m / ss, lag: L };
+  }
+  return best;
+}
+
+/* ---------- per-frame update ---------- */
+function update(dt) {
+  S.elapsed += dt; S.clock += dt;
+  const ux = S.pend.dx, uy = S.pend.dy; S.pend.dx = S.pend.dy = 0;
+  const before = { x: S.dot.x, y: S.dot.y };
+  if (S.phase === 'calib') updateCalib(dt, ux, uy); else updateBlock(dt, ux, uy);
+  // trace: hand input magnitude vs decoded output magnitude (per frame, smoothed)
+  const hs = Math.hypot(ux, uy) / dt / 1000, ds = Math.hypot(S.dot.x - before.x, S.dot.y - before.y) / dt / 1000;
+  S.handSpeed += (hs - S.handSpeed) * 0.4; S.decSpeed += (ds - S.decSpeed) * 0.4;
+  S.trace.hand.push(S.handSpeed); S.trace.hand.shift(); S.trace.dec.push(S.phase === 'calib' ? 0 : S.decSpeed); S.trace.dec.shift();
+  trailPts.push([S.dot.x, S.dot.y]); if (trailPts.length > TRAIL_N) trailPts.shift();
+  if (S.elapsed >= S.dur) { S.phase === 'calib' ? endCalib() : endBlock(); return; }
+  updatePanel(false);
+}
+function updateCalib(dt, ux, uy) {
+  const [sx, sy] = rot(ux, uy, S.theta); const a = 1 - Math.exp(-dt / CONFIG.calib.velTau);
+  S.svel.x += (sx / dt - S.svel.x) * a; S.svel.y += (sy / dt - S.svel.y) * a;
+  S.samples.push({ t: S.elapsed, sx: S.svel.x, sy: S.svel.y });
+  if (S.elapsed >= S.nextFitAt) { S.liveFit = fitCalibration(S.samples); S.nextFitAt += 0.5; }
+  const [rx, ry] = rabbitPos(S.elapsed); S.dot.x = rx; S.dot.y = ry;
+}
+function addJitter(d, px, dt) { const k = px * Math.sqrt(dt * 60); d[0] += gauss() * k; d[1] += gauss() * k; }
+function addPropNoise(d, frac) { const m = Math.hypot(d[0], d[1]); d[0] += gauss() * frac * m; d[1] += gauss() * frac * m; }
+function updateBlock(dt, ux, uy) {
+  const g = CONFIG.baseGain, s = rot(ux, uy, S.theta); let d = null;
+  switch (S.ci) {
+    case 0: { const c = CONFIG.stylus; if (!S.abs.has) break;
+      let dx = (S.abs.x - S.base.x) * (1 - Math.exp(-c.followRate * dt)), dy = (S.abs.y - S.base.y) * (1 - Math.exp(-c.followRate * dt));
+      const maxStep = c.maxSpeedFrac * SIZE * dt, m = Math.hypot(dx, dy); if (m > maxStep) { dx *= maxStep / m; dy *= maxStep / m; }
+      S.base.x += dx; S.base.y += dy; const mm = Math.hypot(dx, dy); if (mm > 0.01) S.perp = [-dy / mm, dx / mm];
+      const amp = c.wobblePx * Math.min(1, (mm / dt) / (c.maxSpeedFrac * SIZE)), w = amp * Math.sin(2 * Math.PI * c.wobbleHz * S.clock);
+      S.dot.x = S.base.x + S.perp[0] * w; S.dot.y = S.base.y + S.perp[1] * w; break; }
+    case 1: { d = [s[0] * g, s[1] * g]; addPropNoise(d, CONFIG.uncal.noiseFrac); addJitter(d, CONFIG.uncal.jitterPx, dt); break; }
+    case 2: { d = rot(s[0], s[1], S.phi); d[0] *= g * S.gain; d[1] *= g * S.gain; addJitter(d, CONFIG.calib.jitterPx, dt); break; }
+    case 3: { const c = CONFIG.retract, p = clamp(S.elapsed / S.dur, 0, 1), drift = S.driftDir * c.maxDriftDeg * p;
+      S.live4.drift = drift; S.live4.signal = lerp(1, c.signalEnd, p); S.live4.q = S.fitQ == null ? null : S.fitQ * (0.3 + 0.7 * (1 - p));
+      if (S.clock < S.dropoutUntil) { S.inDropout = true; break; }
+      if (S.inDropout) S.inDropout = false;
+      if (Math.random() < lerp(c.dropoutRateStart, c.dropoutRateEnd, p) * dt) { S.dropoutUntil = S.clock + rand(c.dropoutMinMs, c.dropoutMaxMs) / 1000; S.inDropout = true; crackle(); break; }
+      d = rot(s[0], s[1], S.phi + drift); const k = g * S.gain * lerp(1, c.gainEnd, p); d[0] *= k; d[1] *= k;
+      addPropNoise(d, lerp(c.noiseFracStart, c.noiseFracEnd, p)); addJitter(d, lerp(c.jitterStart, c.jitterEnd, p), dt); break; }
+    case 4: { const c = CONFIG.retuned, m = rot(s[0], s[1], S.phi + S.offset5), k = g * S.gain * c.gainMult, a = 1 - Math.pow(1 - c.smoothing, dt * 60);
+      S.vel.x += (m[0] * k / dt - S.vel.x) * a; S.vel.y += (m[1] * k / dt - S.vel.y) * a; d = [S.vel.x * dt, S.vel.y * dt]; addJitter(d, c.jitterPx, dt); break; }
+  }
+  if (d) { S.dot.x = clamp(S.dot.x + d[0], 0, SIZE); S.dot.y = clamp(S.dot.y + d[1], 0, SIZE); }
+}
+
+/* ---------- HUD ---------- */
+let lastPanel = 0;
+function updatePanel(force) {
+  const now = performance.now(); if (!force && now - lastPanel < 100) return; lastPanel = now;
+  const c = CONDS[S.ci], left = S.dur - S.elapsed, rows = [], fq = q => q == null ? '—' : Math.round(q * 100) + '%', rec = Math.round(normDeg(-S.phi));
+  let meter = 0;
+  if (S.phase === 'calib') {
+    $('#chip-label').textContent = 'Arrangement 3 of 5 · Calibrating';
+    $('#chip-live').innerHTML = `<strong>fitting</strong> · ${fmtTime(left)}`;
+    $('#tele-title').textContent = 'Calibration'; const f = S.liveFit; meter = f ? f.q : 0;
+    rows.push(['Samples', S.samples.length], ['Time left', fmtTime(left)], ['Fit quality', f ? fq(f.q) : '—'], ['Rotation', f ? Math.round(normDeg(-f.phi)) + '°' : '—'], ['Decoder', 'Learning']);
+  } else {
+    const bps = bitrate(S.hits, S.misses, S.elapsed);
+    $('#chip-label').textContent = `Arrangement ${S.ci + 1} of 5 · ${c.name}`;
+    $('#chip-live').innerHTML = `<strong>${bps.toFixed(2)}</strong> bps · ${fmtTime(left)}`;
+    $('#tele-title').textContent = 'This block';
+    rows.push(['Hits', S.hits], ['Misses', S.misses], ['Time left', fmtTime(left)]);
+    if (S.ci === 0) { rows.push(['Fit quality', '—'], ['Rotation', 'None'], ['Signal', '—']); meter = 1; }
+    if (S.ci === 1) { rows.push(['Fit quality', '—'], ['Rotation', 'Unknown'], ['Signal', '100%']); meter = 0.1; }
+    if (S.ci === 2) { rows.push(['Fit quality', fq(S.fitQ)], ['Rotation', rec + '°'], ['Signal', '100%']); meter = S.fitQ || 0; }
+    if (S.ci === 3) { rows.push(['Fit quality', fq(S.live4.q)], ['Rotation', `${rec}° → ${Math.round(normDeg(rec + S.live4.drift))}°`], ['Signal', S.inDropout ? 'Lost' : Math.round(S.live4.signal * 100) + '%']); meter = S.inDropout ? 0 : S.live4.signal; }
+    if (S.ci === 4) { rows.push(['Fit quality', fq(S.fitQ)], ['Rotation', `${rec}° → ${Math.round(normDeg(rec - S.offset5))}°`], ['Signal', 'Population']); meter = 0.95; }
+    rows.push(['Decoder', c.decoder]);
+  }
+  $('#tele-rows').innerHTML = rows.map(([k, v]) => `<div class="r"><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  const mi = $('#tele-meter'); mi.style.width = Math.round(meter * 100) + '%'; mi.style.background = `#${toneHex(S.phase === 'calib' ? 'teal' : c.tone).toString(16).padStart(6, '0')}`;
+  $('#trace-dec').style.color = mi.style.background;
+  updateHint();
+}
+
+const traceCtx = $('#trace').getContext('2d');
+function drawTrace(colorHex) {
+  const w = 560, h = 64, T = S.trace; traceCtx.clearRect(0, 0, w, h);
+  traceCtx.strokeStyle = 'rgba(150,190,205,0.12)'; traceCtx.lineWidth = 1; traceCtx.beginPath(); traceCtx.moveTo(0, h - 8); traceCtx.lineTo(w, h - 8); traceCtx.stroke();
+  const plot = (arr, col, lw) => { traceCtx.strokeStyle = col; traceCtx.lineWidth = lw; traceCtx.beginPath();
+    arr.forEach((v, i) => { const x = i / (arr.length - 1) * w, y = h - 8 - Math.min(1, v / 1.6) * (h - 14); i ? traceCtx.lineTo(x, y) : traceCtx.moveTo(x, y); }); traceCtx.stroke(); };
+  plot(T.hand, 'rgba(230,237,241,0.35)', 1.2); plot(T.dec, colorHex, 1.8);
+}
+
+/* ---------- render loop ---------- */
+let lastT = performance.now(), camTarget = new THREE.Vector3(0, 0.6, camera.position.z);
+function setPanelTone(t) { const h = toneHex(t); ringMat.color.setHex(h); dotHalo.material.color.setHex(h); trailMat.color.setHex(h); }
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0.001, (now - lastT) / 1000)); lastT = now;
+  if (running()) update(dt);
+  const active = S.phase === 'calib' || S.phase === 'block';
+  const t = now / 1000;
+  // cells
+  cells.forEach((c, i) => {
+    const isT = S.phase === 'block' && i === S.target;
+    c.mesh.material.color.setHex(isT ? COL.amber : COL.cell); c.mesh.material.opacity = isT ? 0.85 + 0.1 * Math.sin(t * 6) : 0.85;
+    c.edge.material.color.setHex(isT ? COL.amber : COL.cellEdge);
+    let flick = 1;
+    if (S.phase === 'block' && S.ci === 3) { const p = S.elapsed / S.dur; flick = 1 - p * 0.5 * Math.max(0, Math.sin(t * 17 + i)) ; if (S.inDropout) flick *= 0.6; }
+    c.edge.material.opacity = 0.9 * flick; c.mesh.position.z = isT ? 0.04 + 0.02 * Math.sin(t * 6) : 0;
+  });
+  if (S.phase === 'block') { const r = cellRect(S.target); const [wx, wy] = toWorld(r.x + r.w / 2, r.y + r.h / 2); targetHalo.position.set(wx, wy, 0.05); targetHalo.visible = true; targetHalo.material.opacity = 0.4 + 0.2 * Math.sin(t * 6); }
+  else targetHalo.visible = false;
+  // dot / rabbit
+  const [dx, dy] = toWorld(S.dot.x, S.dot.y);
+  if (S.phase === 'calib') { rabbit.visible = true; rabbit.position.set(dx, dy, 0.12); dotGroup.visible = false; rabbitHalo.material.opacity = 0.5 + 0.2 * Math.sin(t * 4);
+    const q = S.liveFit ? S.liveFit.q : 0; rabbitHalo.scale.setScalar(1.2 + q * 0.8); }
+  else { rabbit.visible = false; dotGroup.visible = active;
+    dotGroup.position.set(dx, dy, 0.12); ring.rotation.z = t * 0.6;
+    const drop = S.inDropout && S.ci === 3; ringMat.opacity = drop ? 0.25 + 0.2 * Math.random() : 0.95; dotHalo.material.opacity = drop ? 0.1 : 0.5 + 0.08 * Math.sin(t * 5); coreMat.opacity = drop ? 0.2 : 0.9;
+    if (S.ci === 3 && S.phase === 'block') { const p = S.elapsed / S.dur; dotHalo.scale.setScalar(0.9 - p * 0.4); } else dotHalo.scale.setScalar(0.9); }
+  // trail
+  for (let i = 0; i < TRAIL_N; i++) { const p = trailPts[Math.max(0, i - (TRAIL_N - trailPts.length))] || trailPts[0] || [S.dot.x, S.dot.y]; const [tx, ty] = toWorld(p[0], p[1]); trailPos[i*3] = tx; trailPos[i*3+1] = ty; trailPos[i*3+2] = 0; }
+  trailGeo.attributes.position.needsUpdate = true; trail.visible = active && S.phase === 'block';
+  // bursts
+  for (let i = bursts.length - 1; i >= 0; i--) { const b = bursts[i]; b.t += dt; const k = b.t / 0.45; if (k >= 1) { panel.remove(b.s); b.s.material.dispose(); bursts.splice(i, 1); continue; } b.s.scale.setScalar(0.4 + k * (b.hit ? 2.2 : 1.2)); b.s.material.opacity = 0.8 * (1 - k); }
+  // camera: parallax toward the point, idle sway, miss shake
+  const sway = reduceMotion ? 0 : 1;
+  camTarget.set(dx * 0.07 + Math.sin(t * 0.23) * 0.08 * sway, 0.9 + dy * 0.05 + Math.cos(t * 0.19) * 0.06 * sway, camera.position.z);
+  camera.position.x += (camTarget.x - camera.position.x) * 0.06; camera.position.y += (camTarget.y - camera.position.y) * 0.06;
+  if (S.shake > 0) { S.shake -= dt; camera.position.x += (Math.random() - 0.5) * 0.06 * sway; camera.position.y += (Math.random() - 0.5) * 0.06 * sway; }
+  camera.lookAt(0, LOOK_Y, 0);
+  // atmosphere: fog thickens and vignette pulses as threads retract
+  if (S.phase === 'block' && S.ci === 3) { const p = S.elapsed / S.dur; scene.fog.density = 0.055 + p * 0.05; $('#vignette').style.opacity = S.inDropout ? 0.9 : p * 0.35; }
+  else { scene.fog.density += (0.055 - scene.fog.density) * 0.05; if (S.phase !== 'block') $('#vignette').style.opacity = 0; }
+  if (S.flashT > 0) { S.flashT -= dt; $('#flash').style.opacity = Math.max(0, S.flashT / 0.25); } else $('#flash').style.opacity = 0;
+  // motes drift
+  if (moteCount && !S.paused) { const a = motePos; for (let i = 0; i < moteCount; i++) { a[i*3+2] += dt * 0.35; if (a[i*3+2] > 7) a[i*3+2] = -24; } moteGeo.attributes.position.needsUpdate = true; }
+  floor.position.z = (t * 0.6) % (120 / 90); ceil.position.z = floor.position.z;
+  renderer.render(scene, camera);
+  if (active) drawTrace(`#${toneHex(S.phase === 'calib' ? 'teal' : CONDS[S.ci].tone).toString(16).padStart(6, '0')}`);
+  if (S.debug) updateDebug();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- results ---------- */
+function showResults() {
+  S.phase = 'results'; releaseLock(); drawChart();
+  const head = '<tr><th>Arrangement</th><th class="num">Hits</th><th class="num">Misses</th><th class="num">bps</th></tr>';
+  $('#res-table').innerHTML = head + CONDS.map((c, i) => { const r = S.results[i]; return `<tr><td>${i + 1}. ${c.name}</td><td class="num">${r ? r.hits : '—'}</td><td class="num">${r ? r.misses : '—'}</td><td class="num">${r ? r.bps.toFixed(2) : '—'}</td></tr>`; }).join('');
+  const recov = S.calibrated ? ` Calibration recovered ${Math.round(Math.abs(normDeg(-S.phi)))}° with ${Math.round((S.fitQ || 0) * 100)}% fit quality.` : '';
+  $('#res-hidden').textContent = `The hidden rotation in arrangement 2 was ${Math.round(Math.abs(S.theta))}°.${recov} In arrangement 5 the mapping shifted by a further ${Math.round(Math.abs(S.offset5))}°.`;
+  $('#csv-text').value = buildCSV(); $('#copy-status').textContent = ''; show('results');
+}
+function buildCSV() {
+  const lines = ['condition,name,hits,misses,seconds,bps,hidden_rotation_deg,recovered_rotation_deg,fit_quality_pct'];
+  CONDS.forEach((c, i) => { const r = S.results[i]; lines.push([i + 1, `"${c.name}"`, r ? r.hits : '', r ? r.misses : '', r ? r.secs.toFixed(1) : '', r ? r.bps.toFixed(3) : '', Math.round(S.theta), S.calibrated ? Math.round(normDeg(-S.phi)) : '', S.calibrated ? Math.round((S.fitQ || 0) * 100) : ''].join(',')); });
+  return lines.join('\n');
+}
+function drawChart() {
+  const svg = $('#chart'), W = 720, H = 330, L = 56, R = 24, T = 24, B = 56, yMax = 10;
+  const x = i => L + (i + 0.5) * (W - L - R) / 5, y = v => T + (1 - v / yMax) * (H - T - B), parts = [];
+  parts.push(`<rect x="${L}" y="${y(10)}" width="${W - L - R}" height="${y(8) - y(10)}" fill="var(--teal-soft)"/>`);
+  parts.push(`<text x="${W - R - 8}" y="${y(10) + 16}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="var(--font)">Ordinary mouse, 8–10 bps (Neuralink 2026)</text>`);
+  parts.push(`<line x1="${L}" x2="${W - R}" y1="${y(9)}" y2="${y(9)}" stroke="var(--fg)" stroke-dasharray="6 5" stroke-width="1.3"/>`);
+  parts.push(`<text x="${L + 8}" y="${y(9) - 7}" font-size="12" fill="var(--fg)" font-family="var(--font)">Arbaugh, reported just over 9 bps (Regalado 2025)</text>`);
+  for (let v = 0; v <= 10; v += 2) { parts.push(`<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/>`); parts.push(`<text x="${L - 10}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="var(--mono)">${v}</text>`); }
+  parts.push(`<text x="${L - 10}" y="${T - 8}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="var(--mono)">bps</text>`);
+  ['Mouth stylus', 'Before calibration', 'Calibrated', 'Threads retract', 'Retuned'].forEach((s, i) => parts.push(`<text x="${x(i)}" y="${H - B + 24}" text-anchor="middle" font-size="13" fill="var(--fg)" font-family="var(--font)">${s}</text>`));
+  let path = '', prev = false;
+  S.results.forEach((r, i) => { if (r) { path += (prev ? 'L' : 'M') + x(i) + ' ' + y(Math.min(r.bps, yMax)) + ' '; prev = true; } else prev = false; });
+  if (path) parts.push(`<path d="${path}" fill="none" stroke="var(--fg)" stroke-width="2.2" stroke-linejoin="round"/>`);
+  S.results.forEach((r, i) => {
+    if (!r) { parts.push(`<text x="${x(i)}" y="${y(0) - 10}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="var(--font)">not run</text>`); return; }
+    const tv = `var(--${CONDS[i].tone})`, v = Math.min(r.bps, yMax);
+    parts.push(`<circle cx="${x(i)}" cy="${y(v)}" r="7" fill="${tv}" stroke="var(--bg)" stroke-width="2"/>`);
+    parts.push(`<text x="${x(i)}" y="${y(v) - 14}" text-anchor="middle" font-size="13" font-weight="600" fill="${tv}" font-family="var(--mono)">${r.bps.toFixed(2)}</text>`);
+  });
+  svg.innerHTML = parts.join('');
+}
+$('#btn-copy').addEventListener('click', () => {
+  const text = buildCSV(), status = $('#copy-status');
+  const fallback = () => { $('#csv-details').open = true; const t = $('#csv-text'); t.focus(); t.select(); status.textContent = 'Copying is blocked here. The CSV is selected below; press Ctrl+C or ⌘C.'; };
+  try { navigator.clipboard.writeText(text).then(() => { status.textContent = 'Copied to clipboard.'; }, fallback); } catch (e) { fallback(); }
+});
+$('#btn-again').addEventListener('click', () => { S.phase = 'intro'; show('intro'); $('#btn-start').focus(); });
+
+/* ---------- facilitator ---------- */
+let lastDbg = 0;
+function updateDebug() {
+  const now = performance.now(); if (now - lastDbg < 200) return; lastDbg = now;
+  $('#debug-text').textContent = `phase: ${S.phase}${S.paused ? ' (paused)' : ''}  cond: ${S.ci + 1}\nhidden θ: ${S.theta.toFixed(1)}°\nfitted φ: ${S.phi.toFixed(1)}°  gain ×${S.gain.toFixed(2)}\nfit q: ${S.fitQ == null ? '—' : (S.fitQ * 100).toFixed(0) + '%'}  lag ${S.lagMs} ms\ndrift(4): ${S.live4.drift.toFixed(1)}°  offset(5): ${S.offset5.toFixed(1)}°\nlocked: ${S.locked}  lock unavailable: ${S.lockUnavailable}\nN = skip block · R = restart`;
+}
+$('#btn-selftest').addEventListener('click', () => {
+  const samples = [];
+  for (let t = 0; t < CONFIG.calibSeconds; t += 1 / 60) { const [vx, vy] = rabbitVel(t - 0.2); const [sx, sy] = rot(vx * 0.8, vy * 0.8, S.theta); samples.push({ t, sx: sx + gauss() * 5, sy: sy + gauss() * 5 }); }
+  const f = fitCalibration(samples), err = Math.abs(normDeg(-f.phi - S.theta));
+  $('#selftest-out').textContent = `\nself-test: hidden ${S.theta.toFixed(1)}°, recovered ${normDeg(-f.phi).toFixed(1)}°, error ${err.toFixed(1)}°, q ${(f.q * 100).toFixed(0)}%, lag ${f.lag} ms ${err < 3 ? '✓' : '✗'}`;
+});
+
+/* ---------- wire up ---------- */
+$('#btn-start').addEventListener('click', () => startSession(false));
+$('#btn-start-full').addEventListener('click', () => startSession(true));
+$('#btn-continue').addEventListener('click', nextCondition);
+$('#btn-resume').addEventListener('click', resume);
+$('#btn-end').addEventListener('click', endSession);
+show('intro');
+</script>
+
+</body></html>
